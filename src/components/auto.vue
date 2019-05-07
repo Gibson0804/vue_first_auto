@@ -78,6 +78,32 @@
           {{tables}}
           <br>
         <pre>{{validateOne}}</pre>
+
+        <textarea class="w-12" style = "height:200px;float:left;margin-right:10px">
+            public function {{funcName}}({{paramsInfo2}})
+            {
+
+                $result = $this->{{funcGroup}}Repository->{{funcName}}({{paramsInfo2}});
+
+                return $result;
+            }
+        </textarea>
+
+
+        <textarea class="w-10"  style = "height:200px;float:left">
+            public function {{funcName}}({{paramsInfo2}})
+                {
+
+                    $params = [
+                        {{paramsInfo3}}];
+
+                    $url = $this->buildURL('/v1/{{funcGroup|fooStyleCss}}/{{funcName|fooStyleCss}}');
+                    return $this->{{funcMethod|toLowerCaseFilter}}($url, $params);
+                }
+        </textarea>
+
+
+        <pre>{{paramsInfo2}}</pre>
         </div>
 
 
@@ -92,7 +118,7 @@
         <h4>结果</h4>
         <textarea style="width:100%;height:800px;padding:10px;white-space: pre-wrap;">
 /**
- * @api {{'{'+funcMethod+'}'}} /new_energy/v1/{{funcGroup|fooStyleCss}}/{{funcName|fooStyleCss}} {{funcDescription}}
+ * @api {{'{'+funcMethod+'}'}} /v1/{{funcGroup|fooStyleCss}}/{{funcName|fooStyleCss}} {{funcDescription}}
  * @apiName {{funcName}}
  * @apiGroup {{funcGroup}}
  *
@@ -105,7 +131,7 @@
  *
  *
  */
-pulice function {{funcName}} (Request $request) {
+public function {{funcName}} (Request $request) {
     $this->validate($request, [{{validateOne}}{{operationParamsOne}}
         ], [{{validateTwo}}{{operationParamsTwo}}
         ]);
@@ -118,6 +144,10 @@ pulice function {{funcName}} (Request $request) {
     {{Operation}}
 
     $result = $this->{{funcGroup}}Service->{{funcName}}($paramsInfo{{operationInfo}});
+
+    {{paramsComma2}}
+
+    $result = $this->{{funcGroup}}Service->{{funcName}}({{paramsInfo2}});
 
     return response()->json(ResultBuilder::buildSucceed($result, '{{funcDescription+'成功!'}}'));
 }
@@ -144,15 +174,14 @@ function formatValidate(name, comment, type) {
     validate = '\n            \''+
       name +
       '.required' +
-    '\' => \''+ comment + '必须存在';
+    '\' => \''+ comment + '必须存在\',';
     return validate;
   }
 
   validate = 
     '\n            \''+
-    name +
-    '.required' +
-      '\' => \''+ comment + '必须为' + type + '类型';
+    name + '.'+ type +
+      '\' => \''+ comment + '必须为' + type + '类型\',';
   return validate;
 }
 
@@ -161,12 +190,19 @@ function formatValidateOne(name, type) {
     var validate = 
       '\n        \''+
       name+
-      '\' => \''+ type;
+      '\' => \''+ type + '\',';
   return validate;
 }
 
 function firstCaps(str){
   return str.substring(0,1).toUpperCase()+str.substring(1);
+}
+
+
+function camelCase(string){
+    return string.replace( /_([a-z])/g, function( all, letter ) {
+        return letter.toUpperCase();
+    });
 }
 
 
@@ -183,6 +219,9 @@ function firstCaps(str){
             curlString : '',
             curlParams: '',
             paramsComma: '',
+            paramsComma2: '',
+            paramsInfo2: '',
+            paramsInfo3: '',
             Operation: '',
             operationInfo: '',
             operationParamsOne: '',
@@ -206,8 +245,8 @@ function firstCaps(str){
                         label: '字符串'
                     },
                     {
-                        id: 'ty_data',
-                        value: 'data',
+                        id: 'ty_date',
+                        value: 'date_format:Y-m-d H:i:s',
                         label: '日期'
                     },
                     {
@@ -220,14 +259,19 @@ function firstCaps(str){
     },
 
    filters:{
-
-
-fooStyleCss:function(name) {
-  return name.replace(/([A-Z])/g,"_$1").toLowerCase()
-}
-
+      fooStyleCss:function(name) {
+        return name.replace(/([A-Z])/g,"_$1").toLowerCase()
+      }
    },
-      methods:{
+
+   filters:{
+      toLowerCaseFilter:function(name) {
+        return name.toLowerCase()
+      }
+   },
+
+
+   methods:{
         delTable:function(){
           this.tables.pop();
         },
@@ -257,6 +301,9 @@ fooStyleCss:function(name) {
             this.commentParams = '';
             this.curlString = '';
             this.paramsComma= '';
+            this.paramsComma2= '';
+            this.paramsInfo2 = '';
+            this.paramsInfo3 = '';
 
             var type = '';
             var name = '';
@@ -293,7 +340,18 @@ fooStyleCss:function(name) {
               }
 
               this.paramsComma += '\'' + name + '\''
-              
+
+
+              this.paramsComma2 += '$' + camelCase(name) + ' = $request->get(\''+ name +'\');\n    ';
+
+
+              if (this.paramsInfo2 != '') {
+                this.paramsInfo2 +=  ', ' + '$' + camelCase(name);
+              } else {
+                this.paramsInfo2 += '$' + camelCase(name) ;
+              }
+
+              this.paramsInfo3 += '\'' + name + '\' => $' + camelCase(name) + ',\n                       ';
 
 
               if ((type == 0) && (isNeed == 0)) {
@@ -319,8 +377,6 @@ fooStyleCss:function(name) {
                 this.validateTwo += formatValidate(name, comment, 'required')
                 this.validateOne += formatValidateOne(name,  checkType)
               }
-
-              
 
             }
 
